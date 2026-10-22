@@ -92,4 +92,8 @@
     "undici": "^7.29.1",
     "source-map-js": "^1.2.2"
   }
+  "scripts": {
+  "dev": "next dev -p 2022",
+  "start": "next start -p 2022"
+  }
 }
