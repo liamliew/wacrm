@@ -14,7 +14,10 @@
     "noAccount": "Não tem uma conta?",
     "createAccount": "Criar conta",
     "linkExpired": "Esse link expirou. Para redefinir a senha, use “Esqueceu a senha?” para pedir um novo; se estava confirmando seu e-mail, cadastre-se novamente.",
-    "linkInvalid": "Não foi possível entrar com esse link. Se estava confirmando seu e-mail, ele já pode estar verificado — basta entrar abaixo. Para redefinir a senha, peça um novo link e abra-o no mesmo navegador em que o solicitou."
+    "linkInvalid": "Não foi possível entrar com esse link. Se estava confirmando seu e-mail, ele já pode estar verificado — basta entrar abaixo. Para redefinir a senha, peça um novo link e abra-o no mesmo navegador em que o solicitou.",
+    "googleContinue": "Continuar com o Google",
+    "orDivider": "ou",
+    "oauthFailed": "A entrada com o Google não foi concluída. Tente novamente ou entre com seu e-mail e senha."
   },
   "Sidebar": {
     "title": "Modelo de CRM para WhatsApp",
@@ -2225,6 +2228,8 @@
     }
   },
   "SignupPage": {
+    "googleContinue": "Continuar com o Google",
+    "orDivider": "ou",
     "passwordsMismatch": "As senhas não coincidem",
     "passwordTooShort": "A senha deve ter pelo menos 6 caracteres",
     "checkEmailTitle": "Verifique seu e-mail",

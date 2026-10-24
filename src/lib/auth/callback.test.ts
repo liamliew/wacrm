@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_NEXT_PATH,
   isEmailOtpType,
+  isOAuthFlow,
   loginFailurePath,
+  oauthRedirectUrl,
   parseEmailLink,
   parseSupabaseError,
   relativeRedirect,
@@ -157,5 +159,27 @@ describe('relativeRedirect', () => {
   it('never upgrades the path to an absolute URL', () => {
     const res = relativeRedirect('/dashboard');
     expect(res.headers.get('location')).not.toMatch(/^https?:/);
+  });
+});
+
+describe('OAuth helpers', () => {
+  it('detects the oauth flow marker', () => {
+    expect(isOAuthFlow(new URLSearchParams('flow=oauth'))).toBe(true);
+    expect(isOAuthFlow(new URLSearchParams('flow=other'))).toBe(false);
+    expect(isOAuthFlow(new URLSearchParams(''))).toBe(false);
+  });
+
+  it('builds a callback URL carrying next and the marker', () => {
+    const url = new URL(
+      oauthRedirectUrl('http://localhost:2022', '/join/a b'),
+    );
+    expect(url.origin).toBe('http://localhost:2022');
+    expect(url.pathname).toBe('/auth/callback');
+    expect(url.searchParams.get('next')).toBe('/join/a b');
+    expect(isOAuthFlow(url.searchParams)).toBe(true);
+  });
+
+  it('has a /login path for oauth_failed', () => {
+    expect(loginFailurePath('oauth_failed')).toBe('/login?error=oauth_failed');
   });
 });

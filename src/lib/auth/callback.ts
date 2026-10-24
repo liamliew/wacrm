@@ -24,7 +24,32 @@ export type CallbackFailure =
   /** Supabase itself reported the link expired (`error_code=otp_expired`). */
   | 'link_expired'
   /** No `code` / `token_hash` at all, a bad `type`, or the exchange failed. */
-  | 'link_invalid';
+  | 'link_invalid'
+  /** A "Continue with Google" round-trip was cancelled, denied or failed. */
+  | 'oauth_failed';
+
+/**
+ * Marks a callback as the return leg of an OAuth sign-in (rather than an
+ * emailed link) so failures can be explained as such on /login.
+ */
+export const OAUTH_FLOW_PARAM = 'flow';
+export const OAUTH_FLOW_VALUE = 'oauth';
+
+export function isOAuthFlow(params: URLSearchParams): boolean {
+  return params.get(OAUTH_FLOW_PARAM) === OAUTH_FLOW_VALUE;
+}
+
+/**
+ * Where Supabase sends the browser back to after Google. Must be allowed
+ * under Authentication → URL Configuration → Redirect URLs.
+ */
+export function oauthRedirectUrl(origin: string, next: string): string {
+  const params = new URLSearchParams({
+    next,
+    [OAUTH_FLOW_PARAM]: OAUTH_FLOW_VALUE,
+  });
+  return `${origin}/auth/callback?${params.toString()}`;
+}
 
 const MAX_NEXT_LENGTH = 2048;
 
