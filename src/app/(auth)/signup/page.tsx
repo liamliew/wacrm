@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,6 +47,10 @@ function SignupPageInner() {
   const [success, setSuccess] = useState(false);
   const supabase = createClient();
 
+  const nextPath = inviteToken
+    ? `/join/${encodeURIComponent(inviteToken)}`
+    : "/dashboard";
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -72,10 +77,7 @@ function SignupPageInner() {
     // for a session and forwards to `next` (issue #592). Supabase still
     // has to allow this origin under Authentication → URL Configuration
     // → Redirect URLs; see docs/auth-emails.md.
-    const next = inviteToken
-      ? `/join/${encodeURIComponent(inviteToken)}`
-      : "/dashboard";
-    const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+    const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -233,6 +235,18 @@ function SignupPageInner() {
               {loading ? t("creating") : t("submit")}
             </Button>
           </form>
+
+          <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="h-px flex-1 bg-border" />
+            {t("orDivider")}
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
+          <GoogleSignInButton
+            next={nextPath}
+            label={t("googleContinue")}
+            onError={setError}
+          />
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             {t("haveAccount")}{" "}

@@ -31,6 +31,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import {
+  isOAuthFlow,
   loginFailurePath,
   parseEmailLink,
   parseSupabaseError,
@@ -45,14 +46,19 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const next = safeNextPath(searchParams.get('next'));
 
+  // Return leg of "Continue with Google": a denied consent screen or a
+  // failed exchange gets its own message rather than "link" wording.
+  const oauth = isOAuthFlow(searchParams);
+  const failure = oauth ? 'oauth_failed' : 'link_invalid';
+
   const upstreamError = parseSupabaseError(searchParams);
   if (upstreamError) {
-    return relativeRedirect(loginFailurePath(upstreamError));
+    return relativeRedirect(loginFailurePath(oauth ? failure : upstreamError));
   }
 
   const link = parseEmailLink(searchParams);
   if (!link) {
-    return relativeRedirect(loginFailurePath('link_invalid'));
+    return relativeRedirect(loginFailurePath(failure));
   }
 
   const supabase = await createClient();
@@ -73,7 +79,7 @@ export async function GET(request: Request) {
       kind: link.kind,
       message: error.message,
     });
-    return relativeRedirect(loginFailurePath('link_invalid'));
+    return relativeRedirect(loginFailurePath(failure));
   }
 
   return relativeRedirect(next);

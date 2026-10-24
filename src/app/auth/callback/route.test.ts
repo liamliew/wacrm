@@ -103,4 +103,31 @@ describe('GET /auth/callback', () => {
     expect(res.headers.get('location')).toBe('/join/token-1');
     expect(res.headers.get('cache-control')).toBe('no-store');
   });
+
+  describe('OAuth return leg (flow=oauth)', () => {
+    it('exchanges the code and lands on next, like an emailed link', async () => {
+      const res = await GET(request('code=g-1&next=%2Fjoin%2Ftok&flow=oauth'));
+      expect(mocks.exchangeCodeForSession).toHaveBeenCalledWith('g-1');
+      expect(res.headers.get('location')).toBe('/join/tok');
+    });
+
+    it('reports a denied consent screen as oauth_failed', async () => {
+      const res = await GET(
+        request('error=access_denied&error_code=access_denied&flow=oauth'),
+      );
+      expect(mocks.createClient).not.toHaveBeenCalled();
+      expect(res.headers.get('location')).toBe('/login?error=oauth_failed');
+    });
+
+    it('reports a failed exchange or missing code as oauth_failed', async () => {
+      mocks.exchangeCodeForSession.mockResolvedValue({
+        error: { message: 'bad code' },
+      });
+      const failed = await GET(request('code=x&flow=oauth'));
+      expect(failed.headers.get('location')).toBe('/login?error=oauth_failed');
+
+      const bare = await GET(request('flow=oauth'));
+      expect(bare.headers.get('location')).toBe('/login?error=oauth_failed');
+    });
+  });
 });
