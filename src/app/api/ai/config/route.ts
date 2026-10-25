@@ -35,7 +35,7 @@ export async function GET() {
       // `api_key` is selected only to derive `has_key` — it is stripped
       // out below and never returned to the client.
       .select(
-        'provider, model, base_url, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, api_key, embeddings_api_key',
+        'provider, model, base_url, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, handoff_timezone, handoff_hours, handoff_message_enabled, handoff_open_message, handoff_closed_message, handoff_cap_message, api_key, embeddings_api_key',
       )
       .eq('account_id', accountId)
       .maybeSingle()
@@ -103,10 +103,11 @@ export async function POST(request: Request) {
     if (!Number.isFinite(maxPer)) maxPer = 3
     maxPer = Math.min(20, Math.max(1, Math.floor(maxPer)))
 
-    // Handoff routing target for auto-reply. A non-empty string must be a
-    // member of this account (else the conversation would be assigned to a
-    // stranger); an empty string / null means "leave unassigned" (the
-    // shared queue). Absent → left unchanged on update below.
+    // Handoff routing target for auto-reply. The Handoff tab saves it via
+    // PUT /api/ai/handoff; it is still accepted here. A non-empty string
+    // must be a member of this account (else the conversation would be
+    // assigned to a stranger); an empty string / null means "leave
+    // unassigned" (the shared queue). Absent → left unchanged below.
     const rawHandoff =
       typeof body.handoff_agent_id === 'string' ? body.handoff_agent_id.trim() : ''
     const handoffProvided = 'handoff_agent_id' in body
