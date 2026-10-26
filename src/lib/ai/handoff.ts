@@ -20,8 +20,10 @@ const MAX_QUOTE_LEN = 160
 export function buildHandoffSummary(args: {
   messages: ChatMessage[]
   replyCount: number
+  /** 'model' (default): the bot chose to hand off. 'cap': it ran out of replies. */
+  reason?: 'model' | 'cap'
 }): string {
-  const { messages, replyCount } = args
+  const { messages, replyCount, reason = 'model' } = args
 
   const lastCustomer = [...messages]
     .reverse()
@@ -32,7 +34,10 @@ export function buildHandoffSummary(args: {
       ? 'without replying'
       : `after ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`
 
-  const base = `🤖 AI agent handed off ${replies}.`
+  const base =
+    reason === 'cap'
+      ? `🤖 AI agent reached its limit of ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'} and handed off.`
+      : `🤖 AI agent handed off ${replies}.`
 
   if (!lastCustomer) return base
 

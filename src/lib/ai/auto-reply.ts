@@ -5,6 +5,8 @@ import { retrieveKnowledge } from './knowledge'
 import { generateReply } from './generate'
 import { buildSystemPrompt } from './defaults'
 import { buildHandoffSummary } from './handoff'
+import { resolveHandoffMessage, type HandoffReason } from './handoff-hours'
+import { loadHandoffSettings } from './handoff-settings'
 import { logAiUsage } from './usage'
 import { latestUserMessage } from './query'
 import {
@@ -89,9 +91,24 @@ export async function dispatchInboundToAiReply(
     if (convErr || !conv) return
     if (conv.assigned_agent_id) return // a human owns this thread
     if (conv.ai_autoreply_disabled) return // handed off / turned off here
-    // Cheap early-out; the authoritative cap check is the atomic claim
-    // below (this read can race a concurrent inbound).
-    if (conv.ai_reply_count >= config.autoReplyMaxPerConversation) return
+    // Reply cap reached: the bot stops here, so hand the thread to a human
+    // (and tell the customer, if configured) instead of leaving it silent.
+    // The authoritative cap check is still the atomic claim below (this
+    // read can race a concurrent inbound).
+    if (conv.ai_reply_count >= config.autoReplyMaxPerConversation) {
+      await handOffConversation({
+        db,
+        accountId,
+        conversationId,
+        contactId,
+        configOwnerUserId,
+        handoffAgentId: config.handoffAgentId,
+        messages: await buildConversationContext(db, conversationId),
+        replyCount: conv.ai_reply_count ?? 0,
+        reason: 'cap',
+      })
+      return
+    }
 
     const messages = await buildConversationContext(db, conversationId)
     if (messages.length === 0) return
@@ -158,26 +175,18 @@ export async function dispatchInboundToAiReply(
 
     if (handoff || !text) {
       // The model can't (or shouldn't) answer — stop auto-replying on
-      // this thread and hand it to a human. We (a) pause the bot here
-      // (sticky until re-enabled), (b) route the conversation to the
-      // configured handoff agent — null leaves it in the shared queue —
-      // and (c) leave a short internal note so whoever picks it up has
-      // context. Assigning fires the `on_conversation_assigned` trigger,
-      // which notifies the agent.
-      const summary = buildHandoffSummary({
+      // this thread and hand it to a human; see `handOffConversation`.
+      await handOffConversation({
+        db,
+        accountId,
+        conversationId,
+        contactId,
+        configOwnerUserId,
+        handoffAgentId: config.handoffAgentId,
         messages,
         replyCount: conv.ai_reply_count ?? 0,
+        reason: 'model',
       })
-      const update: Record<string, unknown> = {
-        ai_autoreply_disabled: true,
-        ai_handoff_summary: summary,
-      }
-      // Only set the assignee when a target is configured AND the thread
-      // isn't already owned — never stomp an existing human assignment.
-      if (config.handoffAgentId && !conv.assigned_agent_id) {
-        update.assigned_agent_id = config.handoffAgentId
-      }
-      await db.from('conversations').update(update).eq('id', conversationId)
       return
     }
 
@@ -220,6 +229,95 @@ export async function dispatchInboundToAiReply(
     })
   } catch (err) {
     console.error('[ai auto-reply] dispatch failed:', err)
+  }
+}
+
+interface HandOffArgs {
+  db: ReturnType<typeof supabaseAdmin>
+  accountId: string
+  conversationId: string
+  contactId: string
+  configOwnerUserId: string
+  handoffAgentId: string | null
+  messages: Awaited<ReturnType<typeof buildConversationContext>>
+  replyCount: number
+  reason: HandoffReason
+}
+
+/**
+ * Hand a conversation to a human: (a) pause the bot here (sticky until
+ * re-enabled), (b) route the conversation to the configured handoff
+ * agent — null leaves it in the shared queue — and (c) leave a short
+ * internal note so whoever picks it up has context. Assigning fires the
+ * `on_conversation_assigned` trigger, which notifies the agent. Then, if
+ * the account configured one, tell the customer.
+ *
+ * The update only matches while the bot is still active on the thread, so
+ * of two racing dispatches exactly one performs the handoff (and sends
+ * the message). "Resume AI" re-enables the bot, so a later handoff on the
+ * same thread is a new handoff and may message again.
+ */
+async function handOffConversation(args: HandOffArgs): Promise<void> {
+  const { db, conversationId, reason } = args
+
+  const summary = buildHandoffSummary({
+    messages: args.messages,
+    replyCount: args.replyCount,
+    reason,
+  })
+  const update: Record<string, unknown> = {
+    ai_autoreply_disabled: true,
+    ai_handoff_summary: summary,
+  }
+  // Only set the assignee when a target is configured AND the thread
+  // isn't already owned — never stomp an existing human assignment. (The
+  // eligibility gate already returned for assigned threads, so the
+  // `assigned_agent_id is null` filter below is what enforces it on a race.)
+  if (args.handoffAgentId) update.assigned_agent_id = args.handoffAgentId
+
+  let query = db
+    .from('conversations')
+    .update(update)
+    .eq('id', conversationId)
+    .eq('ai_autoreply_disabled', false)
+  if (args.handoffAgentId) query = query.is('assigned_agent_id', null)
+  const { data: flipped, error } = await query.select('id')
+  if (error) {
+    console.error('[ai auto-reply] handoff update failed:', error)
+    return
+  }
+  if (!flipped || flipped.length === 0) return // already handed off by another dispatch
+
+  await sendHandoffMessage(args)
+}
+
+/**
+ * Best-effort message to the customer after a handoff. Never throws: a
+ * failed send (Meta error, no WhatsApp config, settings not readable) is
+ * logged and the handoff stands.
+ */
+async function sendHandoffMessage(args: HandOffArgs): Promise<void> {
+  try {
+    const settings = await loadHandoffSettings(args.db, args.accountId)
+    if (!settings) return
+    const chosen = resolveHandoffMessage({
+      settings,
+      reason: args.reason,
+      now: new Date(),
+    })
+    if (!chosen.send) return
+    await engineSendText({
+      accountId: args.accountId,
+      userId: args.configOwnerUserId,
+      conversationId: args.conversationId,
+      contactId: args.contactId,
+      text: chosen.text,
+    })
+  } catch (err) {
+    console.error(
+      `[ai auto-reply] handoff message failed for conversation ${args.conversationId} (the handoff itself stands):`,
+      err,
+    )
   }
 }
 
