@@ -18,6 +18,12 @@ export interface ApiConversation {
   last_message_text: string | null;
   last_message_at: string | null;
   unread_count: number;
+  /** AI auto-reply state: true while the bot is paused on this thread. */
+  ai_paused: boolean;
+  /** How many automatic replies the bot has sent on this thread. */
+  ai_reply_count: number;
+  /** The note the bot left when it handed the thread to a human. */
+  ai_handoff_summary: string | null;
   created_at: string;
   updated_at: string;
   contact: {
@@ -60,6 +66,9 @@ export function serializeConversation(conv: Conversation): ApiConversation {
     last_message_text: conv.last_message_text ?? null,
     last_message_at: conv.last_message_at ?? null,
     unread_count: conv.unread_count ?? 0,
+    ai_paused: conv.ai_autoreply_disabled ?? false,
+    ai_reply_count: conv.ai_reply_count ?? 0,
+    ai_handoff_summary: conv.ai_handoff_summary ?? null,
     created_at: conv.created_at,
     updated_at: conv.updated_at,
     contact: c

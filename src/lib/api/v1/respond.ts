@@ -22,6 +22,7 @@ export type ApiErrorCode =
   | 'forbidden' // valid key, but missing the required scope
   | 'rate_limited' // per-key budget exhausted
   | 'bad_request' // malformed input
+  | 'conflict' // duplicate, or still in use
   | 'not_found'
   | 'internal';
 

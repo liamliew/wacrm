@@ -16,6 +16,9 @@ import {
   resolveAuditUserId,
   ContactError,
 } from '@/lib/api/v1/contacts';
+import { handler } from '@/lib/api/v1/route';
+import { isUuidString } from '@/lib/api/v1/input';
+import { recordAudit } from '@/lib/api/v1/audit';
 
 export async function GET(
   request: Request,
@@ -100,3 +103,28 @@ export async function PATCH(
     return toApiErrorResponse(err);
   }
 }
+
+// ============================================================
+// DELETE /api/v1/contacts/{id}  (scope contacts:delete)
+// Removes the contact together with its conversations, messages, notes
+// and tags. Deals that pointed at it are kept (with no contact). This
+// cannot be undone.
+// ============================================================
+
+
+export const DELETE = handler<{ id: string }>('contacts:delete', async (ctx, _request, { id }) => {
+  if (!isUuidString(id)) return fail('not_found', 'Contact not found', 404);
+  const { data, error } = await ctx.supabase
+    .from('contacts')
+    .delete()
+    .eq('id', id)
+    .eq('account_id', ctx.accountId)
+    .select('id');
+  if (error) {
+    console.error('[api/v1/contacts] delete error:', error);
+    return fail('internal', 'Failed to delete contact', 500);
+  }
+  if (!data || data.length === 0) return fail('not_found', 'Contact not found', 404);
+  await recordAudit(ctx, { action: 'contact.delete', resourceType: 'contact', resourceId: id });
+  return ok({ id, deleted: true });
+});
