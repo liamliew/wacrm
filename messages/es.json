@@ -14,7 +14,10 @@
     "noAccount": "¿No tienes una cuenta?",
     "createAccount": "Crear cuenta",
     "linkExpired": "Ese enlace expiró. Para restablecer la contraseña, usa “¿Olvidaste tu contraseña?” y pide uno nuevo; si estabas confirmando tu correo, regístrate de nuevo.",
-    "linkInvalid": "No se pudo iniciar sesión con ese enlace. Si estabas confirmando tu correo, es posible que ya esté verificado; inicia sesión abajo. Para restablecer la contraseña, pide un enlace nuevo y ábrelo en el mismo navegador desde el que lo solicitaste."
+    "linkInvalid": "No se pudo iniciar sesión con ese enlace. Si estabas confirmando tu correo, es posible que ya esté verificado; inicia sesión abajo. Para restablecer la contraseña, pide un enlace nuevo y ábrelo en el mismo navegador desde el que lo solicitaste.",
+    "googleContinue": "Continuar con Google",
+    "orDivider": "o",
+    "oauthFailed": "No se completó el inicio de sesión con Google. Inténtalo de nuevo o inicia sesión con tu correo y contraseña."
   },
   "Sidebar": {
     "title": "Plantilla de CRM para WhatsApp",
@@ -2285,6 +2288,8 @@
     }
   },
   "SignupPage": {
+    "googleContinue": "Continuar con Google",
+    "orDivider": "o",
     "passwordsMismatch": "Las contraseñas no coinciden",
     "passwordTooShort": "La contraseña debe tener al menos 6 caracteres",
     "checkEmailTitle": "Revisa tu correo",

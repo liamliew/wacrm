@@ -54,6 +54,28 @@ Dashboard → **Authentication → URL Configuration**:
 Changes take effect immediately, but an email that was already sent
 keeps the link it was sent with — request a fresh one to test.
 
+### Sign in with Google
+
+The login and sign-up pages offer **Continue with Google**. It uses
+Supabase's Google provider and returns through the same
+`/auth/callback` route (marked `flow=oauth`, so a cancelled or failed
+attempt shows a Google-specific message on `/login`).
+
+1. In Google Cloud Console create an OAuth client (type *Web
+   application*). Add the **Authorized redirect URI**
+   `https://<project-ref>.supabase.co/auth/v1/callback` (self-hosted:
+   `<API_EXTERNAL_URL>/auth/v1/callback`).
+2. Supabase dashboard → **Authentication → Providers → Google**: enable
+   it and paste the client ID and secret.
+3. Make sure every origin the app runs on is in **Redirect URLs**
+   (`https://crm.example.com/**`, and `http://localhost:2022/**` for
+   local dev), as above.
+
+New Google users get a profile and personal account from the same
+`handle_new_user` trigger as email sign-ups (name from Google's
+`full_name`). A Google sign-in with an email that already has a password
+account is linked to it by Supabase.
+
 ### Self-hosted Supabase (Docker)
 
 The Studio page under **Authentication → URL Configuration does not
