@@ -65,3 +65,29 @@ describe('parseAutomationSteps', () => {
     bad(() => parseAutomationSteps(many), 'at most 100');
   });
 });
+
+import { redactSteps } from './flow-inputs';
+
+describe('send_webhook is dashboard-only', () => {
+  it('refuses to create webhook steps, including inside branches', () => {
+    bad(() => parseAutomationSteps([{ step_type: 'send_webhook', step_config: { url: 'https://evil.test' } }]), 'only be created in the dashboard');
+    bad(
+      () => parseAutomationSteps([{ step_type: 'condition', step_config: {}, branches: { yes: [{ step_type: 'send_webhook', step_config: {} }] } }]),
+      'only be created in the dashboard'
+    );
+  });
+  it('hides webhook headers and body templates (which may hold credentials) in anything returned', () => {
+    const out = redactSteps([
+      { step_type: 'send_webhook', step_config: { url: 'https://hook.test/x', headers: { Authorization: 'Bearer SECRET' }, body_template: '{"k":"SECRET"}' } },
+      { step_type: 'condition', step_config: {}, branches: { yes: [{ step_type: 'send_webhook', step_config: { url: 'u', headers: { 'X-Key': 'SECRET' } } }], no: [] } },
+      { step_type: 'send_message', step_config: { text: 'keep me' } },
+    ]);
+    const text = JSON.stringify(out);
+    expect(text).not.toContain('SECRET');
+    expect(text).toContain('https://hook.test/x');
+    expect(text).toContain('keep me');
+  });
+  it('passes non-arrays through untouched', () => {
+    expect(redactSteps(null)).toBeNull();
+  });
+});

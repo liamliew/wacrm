@@ -10,7 +10,7 @@ import { handler } from '@/lib/api/v1/route';
 import { ok, fail, badRequest } from '@/lib/api/v1/respond';
 import { isUuidString, parseBody, readBody } from '@/lib/api/v1/input';
 import { recordAudit } from '@/lib/api/v1/audit';
-import { AUTOMATION_TRIGGER_TYPES, isPlainObject, parseAutomationSteps } from '@/lib/api/v1/flow-inputs';
+import { AUTOMATION_TRIGGER_TYPES, isPlainObject, parseAutomationSteps, redactSteps } from '@/lib/api/v1/flow-inputs';
 import { AUTOMATIONS } from '@/lib/api/v1/resources';
 import { loadStepsTree, replaceSteps, type BuilderStepInput } from '@/lib/automations/steps-tree';
 import { validateStepsForActivation, validateTriggerForActivation } from '@/lib/automations/validate';
@@ -32,7 +32,7 @@ async function loadAutomation(ctx: ApiKeyContext, id: string) {
 export const GET = handler<{ id: string }>('automations:read', async (ctx, _req, { id }) => {
   const automation = await loadAutomation(ctx, id);
   if (!automation) return notFound();
-  return ok({ automation, steps: await loadStepsTree(id) });
+  return ok({ automation, steps: redactSteps(await loadStepsTree(id)) });
 });
 
 export const PATCH = handler<{ id: string }>('automations:write', async (ctx, request, { id }) => {
@@ -102,7 +102,7 @@ export const PATCH = handler<{ id: string }>('automations:write', async (ctx, re
     fields: [...Object.keys(data), ...(steps !== undefined ? ['steps'] : [])],
   });
   const updated = await loadAutomation(ctx, id);
-  return ok({ automation: updated, steps: await loadStepsTree(id) });
+  return ok({ automation: updated, steps: redactSteps(await loadStepsTree(id)) });
 });
 
 export const DELETE = handler<{ id: string }>('automations:write', async (ctx, _req, { id }) => {

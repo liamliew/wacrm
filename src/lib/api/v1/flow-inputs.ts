@@ -80,11 +80,48 @@ export const AUTOMATION_TRIGGER_TYPES = [
   'conversation_assigned', 'tag_added', 'time_based', 'interactive_reply',
 ] as const;
 
+/**
+ * Step types the API may create. `send_webhook` is deliberately absent: it
+ * posts contact data to an arbitrary URL with arbitrary headers, which makes
+ * it a ready-made way to move data out of the workspace (or to smuggle a
+ * secret in a header). Like keys and tokens, it stays a dashboard-only action.
+ */
 export const AUTOMATION_STEP_TYPES = [
   'send_message', 'send_buttons', 'send_list', 'send_template', 'add_tag', 'remove_tag',
   'assign_conversation', 'update_contact_field', 'create_deal', 'wait', 'condition',
-  'send_webhook', 'close_conversation',
+  'close_conversation',
 ] as const;
+
+const HIDDEN = '[hidden: set in the dashboard]';
+
+/**
+ * Copy of a step tree that is safe to return to an API caller: webhook
+ * URLs' headers and bodies (which may carry credentials) are hidden. The
+ * walk follows both the nested `branches` form and any `children`.
+ */
+export function redactSteps(steps: unknown): unknown {
+  if (!Array.isArray(steps)) return steps;
+  return steps.map((s) => {
+    if (!isObject(s)) return s;
+    const out: Record<string, unknown> = { ...s };
+    if (s.step_type === 'send_webhook' && isObject(s.step_config)) {
+      const { url, ...rest } = s.step_config as Record<string, unknown>;
+      out.step_config = {
+        url,
+        ...(rest.headers !== undefined ? { headers: HIDDEN } : {}),
+        ...(rest.body_template !== undefined ? { body_template: HIDDEN } : {}),
+      };
+    }
+    if (isObject(s.branches)) {
+      out.branches = {
+        ...(s.branches.yes !== undefined ? { yes: redactSteps(s.branches.yes) } : {}),
+        ...(s.branches.no !== undefined ? { no: redactSteps(s.branches.no) } : {}),
+      };
+    }
+    if (Array.isArray(s.children)) out.children = redactSteps(s.children);
+    return out;
+  });
+}
 
 const MAX_ROOT_STEPS = 50;
 const MAX_TOTAL_STEPS = 100;
@@ -114,6 +151,9 @@ export function parseAutomationSteps(raw: unknown): StepInput[] {
         if (!['step_type', 'step_config', 'branches'].includes(k)) throw badRequest(`${here}: unknown field '${k}'`);
       }
       if (typeof entry.step_type !== 'string' || !(AUTOMATION_STEP_TYPES as readonly string[]).includes(entry.step_type)) {
+        if (entry.step_type === 'send_webhook') {
+          throw badRequest(`${here}: 'send_webhook' steps can only be created in the dashboard`);
+        }
         throw badRequest(`${here}.step_type must be one of: ${AUTOMATION_STEP_TYPES.join(', ')}`);
       }
       if (entry.step_config !== undefined && !isObject(entry.step_config)) {

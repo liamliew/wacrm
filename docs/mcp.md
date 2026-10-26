@@ -42,17 +42,29 @@ data or send messages, add `"WACRM_ENABLE_WRITES": "true"` (and
 
 ## What it exposes
 
-- **Reads (always on):** `whoami`, contacts (list/get), conversations
-  (list/get), messages (list), broadcast status.
-- **Writes (opt-in):** send a message, create/update a contact.
-- **Broadcasts (opt-in):** launch a template broadcast — requires an
-  explicit `confirm` and is marked destructive.
+Tool groups, each opt-in via env (all but reads also need
+`WACRM_ENABLE_WRITES=true`; `WACRM_ENABLE_ALL=true` turns everything on):
+
+| Group | Env flag | Covers |
+| --- | --- | --- |
+| read | _always_ | contacts, conversations, messages, AI agent config, knowledge base, usage, tags, fields, pipelines, deals, templates, flows, automations, members, audit log, `test_ai_agent` and `preview_handoff_message` dry runs |
+| write | `WACRM_ENABLE_WRITES` | send messages, contacts, notes, conversations (assign/close/pause AI), tags, fields, quick replies, pipelines, deals, template sync/submit |
+| ai-admin | `WACRM_ENABLE_AI_ADMIN` | `update_ai_agent` (prompt, model, switches, handoff), knowledge-base documents, reindex |
+| automations | `WACRM_ENABLE_AUTOMATIONS` | create/update flows and automations, flow status |
+| deletes | `WACRM_ENABLE_DELETES` | delete tools (all require `confirm: true`) |
+| broadcast | `WACRM_ENABLE_BROADCASTS` | launch broadcasts (`confirm: true`) |
+
+**Not exposed on purpose:** AI provider API key, WhatsApp access token,
+API-key management, member role/invite/remove, outbound webhooks, and
+`send_webhook` automation steps.
 
 ## Safety
 
-Because sending WhatsApp messages is a real side effect, the server is
-**read-only until you opt in**, layered on top of the API key's own
-scopes. Give an assistant a read-only key and read-only config and it
-physically cannot send anything. See the
-[server README](../mcp-server/README.md) for the full tool list and
-safety model.
+Customer messages are untrusted text that an LLM will read, so the
+server limits what a prompt-injected model can do: groups are opt-in,
+risky actions need `confirm: true`, the AI agent and automations can be
+tried first (`test_ai_agent`, `preview_handoff_message`), every API-key
+write lands in the audit log (`get_audit_log`), and the server sends
+instructions telling the model not to obey text found in customer data.
+Give the key only the scopes you need. Transport is stdio only. See the
+[server README](../mcp-server/README.md) for the tool list.

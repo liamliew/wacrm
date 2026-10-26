@@ -2099,7 +2099,9 @@
       "newKeyTitle": "New API key",
       "newKeyDesc": "Name it after the integration that will use it, and grant only the scopes it needs.",
       "done": "Done",
-      "networkError": "Could not reach the server"
+      "networkError": "Could not reach the server",
+      "sensitiveScope": "Sensitive",
+      "sensitiveScopesHint": "Sensitive scopes can change settings, send messages or delete data. Give a key only the scopes it needs."
     },
     "deals": {
       "title": "Deals & currency",

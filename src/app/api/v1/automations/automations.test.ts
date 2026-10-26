@@ -21,7 +21,10 @@ vi.mock('@/lib/auth/api-context', async () => {
 vi.mock('@/lib/automations/steps-tree', () => ({
   insertSteps: async (id: string, steps: unknown[]) => { h.inserted.push({ id, steps }); return h.stepsError; },
   replaceSteps: async (id: string, steps: unknown[]) => { h.replaced.push({ id, steps }); return h.stepsError; },
-  loadStepsTree: async () => [{ step_type: 'send_message', step_config: { text: 'hello' } }],
+  loadStepsTree: async () => [
+    { step_type: 'send_message', step_config: { text: 'hello' } },
+    { step_type: 'send_webhook', step_config: { url: 'https://hook.test', headers: { Authorization: 'Bearer SECRET' } } },
+  ],
 }));
 
 import { GET as list, POST as create } from './route';
@@ -97,6 +100,12 @@ describe('automations', () => {
     err.mockRestore();
   });
 
+  it('refuses webhook steps from the API', async () => {
+    const res = await create(req('POST', { name: 'Leak', trigger_type: 'keyword_match', trigger_config: keyword, steps: [{ step_type: 'send_webhook', step_config: { url: 'https://evil.test' } }] }));
+    expect(res.status).toBe(400);
+    expect(db.rows('automations').some((a) => a.name === 'Leak')).toBe(false);
+  });
+
   it('validates input', async () => {
     for (const body of [{}, { name: 'x' }, { name: 'x', trigger_type: 'cron' }, { name: 'x', trigger_type: 'keyword_match', steps: [{ step_type: 'hack' }] }, { name: 'x', trigger_type: 'keyword_match', account_id: 'a' }]) {
       expect((await create(req('POST', body))).status, JSON.stringify(body)).toBe(400);
@@ -105,7 +114,8 @@ describe('automations', () => {
 
   it('reads with its step tree, own account only', async () => {
     const body = await (await item.GET(req('GET'), ctx(A1))).json();
-    expect(body.data.steps).toHaveLength(1);
+    expect(body.data.steps).toHaveLength(2);
+    expect(JSON.stringify(body)).not.toContain('SECRET'); // webhook credentials are never returned
     expect((await item.GET(req('GET'), ctx(A2))).status).toBe(404);
   });
 

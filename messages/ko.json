@@ -2099,7 +2099,9 @@
       "newKeyTitle": "새 API 키",
       "newKeyDesc": "이 키를 사용할 연동 서비스의 이름을 붙이고, 필요한 권한 범위만 부여하세요.",
       "done": "완료",
-      "networkError": "서버에 연결할 수 없습니다"
+      "networkError": "서버에 연결할 수 없습니다",
+      "sensitiveScope": "민감",
+      "sensitiveScopesHint": "민감한 권한은 설정 변경, 메시지 전송, 데이터 삭제가 가능합니다. 키에는 필요한 권한만 부여하세요."
     },
     "deals": {
       "title": "딜 & 통화",

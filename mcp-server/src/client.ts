@@ -88,9 +88,14 @@ export class WacrmClient {
     }
 
     if (!res.ok) {
-      const envelope = payload as { error?: { code?: string; message?: string } } | undefined;
+      const envelope = payload as
+        | { error?: { code?: string; message?: string; issues?: unknown; details?: unknown } }
+        | undefined;
       const code = envelope?.error?.code ?? 'internal';
       let message = envelope?.error?.message ?? `Request failed with status ${res.status}`;
+      // Validation failures (flows, automations) carry the list of problems to fix.
+      const extra = envelope?.error?.issues ?? envelope?.error?.details;
+      if (extra !== undefined) message += `\n${JSON.stringify(extra)}`;
       if (res.status === 429) {
         const retryAfter = res.headers.get('Retry-After');
         if (retryAfter) message += ` (retry after ${retryAfter}s)`;
@@ -108,6 +113,32 @@ export class WacrmClient {
   ): Promise<Paginated<T>> {
     const res = await this.request<T[]>('GET', path, { query });
     return { data: res.data, next_cursor: res.meta?.next_cursor ?? null };
+  }
+
+  // --- Generic access (used by the workspace-control tools) ---------
+
+  /** GET /api/v1<path>. List endpoints return `{ data, next_cursor }`. */
+  get(path: string, query: Record<string, string | number | undefined> = {}): Promise<{ data: unknown; next_cursor?: string | null }> {
+    return this.request<unknown>('GET', path, { query }).then((r) => ({
+      data: r.data,
+      ...(r.meta ? { next_cursor: r.meta.next_cursor } : {}),
+    }));
+  }
+
+  post(path: string, body?: unknown): Promise<{ data: unknown }> {
+    return this.request('POST', path, { body: body ?? {} });
+  }
+
+  patch(path: string, body: unknown): Promise<{ data: unknown }> {
+    return this.request('PATCH', path, { body });
+  }
+
+  put(path: string, body: unknown): Promise<{ data: unknown }> {
+    return this.request('PUT', path, { body });
+  }
+
+  delete(path: string): Promise<{ data: unknown }> {
+    return this.request('DELETE', path);
   }
 
   // --- Identity -----------------------------------------------------

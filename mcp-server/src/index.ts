@@ -17,16 +17,20 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { loadConfig } from './config.js';
 import { WacrmClient } from './client.js';
 import { registerTools } from './tools/index.js';
+import { INSTRUCTIONS } from './instructions.js';
 
 // package.json version, kept in sync manually with the manifest.
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 
 async function main(): Promise<void> {
   const config = loadConfig();
   const client = new WacrmClient(config);
 
-  const server = new McpServer({ name: 'wacrm-mcp', version: VERSION });
-  const groups = registerTools(server, client, config);
+  const server = new McpServer(
+    { name: 'wacrm-mcp', version: VERSION },
+    { instructions: INSTRUCTIONS },
+  );
+  const { groups, tools } = registerTools(server, client, config);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
@@ -34,7 +38,7 @@ async function main(): Promise<void> {
   // Stderr only — stdout is reserved for the MCP protocol.
   console.error(
     `wacrm MCP server v${VERSION} ready — instance ${config.baseUrl}, ` +
-      `tool groups: ${groups.join(', ')}` +
+      `${tools.length} tools, groups: ${groups.join(', ')}` +
       (config.enableWrites ? '' : ' (read-only; set WACRM_ENABLE_WRITES to allow changes)'),
   );
 }
