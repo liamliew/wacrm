@@ -65,38 +65,34 @@ assistant change data or send messages, add the write guards:
 
 ## Tools
 
-Read tools are always available. Write and broadcast tools appear only
-when their guard is set.
+Read tools are always on; everything else is opt-in.
 
-| Tool                 | Group     | Scope needed         | What it does                                    |
-| -------------------- | --------- | -------------------- | ----------------------------------------------- |
-| `whoami`             | read      | _(any valid key)_    | Show the account + scopes the key carries       |
-| `list_contacts`      | read      | `contacts:read`      | List/search contacts (paginated)                |
-| `get_contact`        | read      | `contacts:read`      | Read one contact                                |
-| `list_conversations` | read      | `conversations:read` | List conversations, filter by status/contact    |
-| `get_conversation`   | read      | `conversations:read` | Read one conversation                           |
-| `list_messages`      | read      | `messages:read`      | List a conversation's messages                  |
-| `get_broadcast`      | read      | `broadcasts:send`    | Poll a broadcast's delivery status              |
-| `send_message`       | write     | `messages:send`      | Send a WhatsApp message (text/template/media)   |
-| `create_contact`     | write     | `contacts:write`     | Create (find-or-create) a contact               |
-| `update_contact`     | write     | `contacts:write`     | Update a contact / replace its tags             |
-| `send_broadcast`     | broadcast | `broadcasts:send`    | Launch a template broadcast (requires `confirm`)|
+| Group | Enable with | Tools |
+| --- | --- | --- |
+| read | _(always)_ | `whoami` `list_contacts` `get_contact` `list_conversations` `get_conversation` `list_messages` `get_broadcast` `list_members` `get_ai_agent` `preview_handoff_message` `test_ai_agent` `get_ai_usage` `list_knowledge_documents` `get_knowledge_document` `list_contact_notes` `get_contact_custom_fields` `list_tags` `list_custom_fields` `list_quick_replies` `list_pipelines` `get_pipeline` `list_deals` `get_deal` `list_templates` `get_template` `list_flows` `get_flow` `validate_flow` `list_flow_runs` `list_flow_templates` `list_automations` `get_automation` `list_automation_logs` `list_automation_templates` `get_audit_log` |
+| write | `WACRM_ENABLE_WRITES` | `send_message` `create_contact` `update_contact` `update_conversation` `add_contact_note` `set_contact_custom_fields` `create_tag` `update_tag` `create_custom_field` `update_custom_field` `create_quick_reply` `update_quick_reply` `create_pipeline` `update_pipeline` `add_pipeline_stage` `update_pipeline_stage` `create_deal` `update_deal` `sync_templates` `submit_template` |
+| ai-admin | `WACRM_ENABLE_AI_ADMIN` | `update_ai_agent` `create_knowledge_document` `update_knowledge_document` `reindex_knowledge_base` |
+| automations | `WACRM_ENABLE_AUTOMATIONS` | `create_flow` `update_flow` `set_flow_status` `create_automation` `update_automation` `duplicate_automation` |
+| deletes | `WACRM_ENABLE_DELETES` | `delete_*` tools (contact, tag, flow, deal, note, …) |
+| broadcast | `WACRM_ENABLE_BROADCASTS` | `send_broadcast` |
+
+`WACRM_ENABLE_ALL=true` enables every group. Each tool needs the
+matching API-key scope (see `docs/public-api.md`).
 
 ## Safety model
 
-Sending WhatsApp messages through an LLM is a real-world side effect, so
-the server layers three guards:
-
-1. **Read-only by default.** Write and broadcast tools are not even
-   registered — the model can't see them — unless you opt in via
-   `WACRM_ENABLE_WRITES` / `WACRM_ENABLE_BROADCASTS`.
-2. **API-key scopes.** Whatever the guards allow, your wacrm instance
-   still enforces the key's scopes. A call without the right scope
-   returns a clean `forbidden` error. Issue a read-only key for a
-   read-only assistant.
-3. **Explicit broadcast confirmation.** `send_broadcast` refuses to run
-   unless called with `confirm: true`, and is marked `destructive` so
-   compliant clients prompt the user first.
+1. **Opt-in groups.** Tools outside the read group are not registered
+   unless enabled, so the model cannot see them.
+2. **API-key scopes** are enforced server-side regardless.
+3. **Confirm gates.** Destructive, outbound and behaviour-changing tools
+   refuse unless called with `confirm: true`.
+4. **Dry runs.** `test_ai_agent` and `preview_handoff_message` show what
+   the AI would do without sending anything.
+5. **Audit log.** API-key writes are recorded; read with `get_audit_log`.
+6. **Prompt-injection stance.** Server instructions tell the model that
+   customer messages, names, notes and knowledge text are untrusted.
+7. **No secrets.** Provider API key, WhatsApp token, API keys, member
+   role changes, webhooks and `send_webhook` steps are not exposed.
 
 ## Development
 

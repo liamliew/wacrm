@@ -2102,7 +2102,9 @@
       "newKeyTitle": "Nueva clave de API",
       "newKeyDesc": "Nómbrala según la integración que la usará y concede solo los alcances que necesite.",
       "done": "Listo",
-      "networkError": "No se pudo conectar con el servidor"
+      "networkError": "No se pudo conectar con el servidor",
+      "sensitiveScope": "Sensible",
+      "sensitiveScopesHint": "Los permisos sensibles pueden cambiar la configuración, enviar mensajes o borrar datos. Da a cada clave solo los permisos que necesita."
     },
     "deals": {
       "title": "Negocios y moneda",

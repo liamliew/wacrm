@@ -13,7 +13,14 @@
 export interface Config {
   baseUrl: string;
   apiKey: string;
+  /** Messages, contacts, inbox, workspace settings, pipelines, templates. */
   enableWrites: boolean;
+  /** Changing the AI agent (prompt, switches, handoff) and its knowledge base. Needs enableWrites. */
+  enableAiAdmin: boolean;
+  /** Creating and activating flows and automations. Needs enableWrites. */
+  enableAutomations: boolean;
+  /** Delete tools (each also needs confirm: true). Needs enableWrites. */
+  enableDeletes: boolean;
   enableBroadcasts: boolean;
 }
 
@@ -46,19 +53,32 @@ export function loadConfig(): Config {
     );
   }
 
-  const enableWrites = truthy(process.env.WACRM_ENABLE_WRITES);
-  const enableBroadcasts = truthy(process.env.WACRM_ENABLE_BROADCASTS);
+  // WACRM_ENABLE_ALL turns on every group at once (full control).
+  const all = truthy(process.env.WACRM_ENABLE_ALL);
+  const enableWrites = all || truthy(process.env.WACRM_ENABLE_WRITES);
+  const enableAiAdmin = all || truthy(process.env.WACRM_ENABLE_AI_ADMIN);
+  const enableAutomations = all || truthy(process.env.WACRM_ENABLE_AUTOMATIONS);
+  const enableDeletes = all || truthy(process.env.WACRM_ENABLE_DELETES);
+  const enableBroadcasts = all || truthy(process.env.WACRM_ENABLE_BROADCASTS);
 
-  if (enableBroadcasts && !enableWrites) {
-    throw new Error(
-      'WACRM_ENABLE_BROADCASTS requires WACRM_ENABLE_WRITES to also be set.',
-    );
+  for (const [name, on] of [
+    ['WACRM_ENABLE_AI_ADMIN', enableAiAdmin],
+    ['WACRM_ENABLE_AUTOMATIONS', enableAutomations],
+    ['WACRM_ENABLE_DELETES', enableDeletes],
+    ['WACRM_ENABLE_BROADCASTS', enableBroadcasts],
+  ] as const) {
+    if (on && !enableWrites) {
+      throw new Error(`${name} requires WACRM_ENABLE_WRITES to also be set.`);
+    }
   }
 
   return {
     baseUrl,
     apiKey: apiKey!,
     enableWrites,
+    enableAiAdmin,
+    enableAutomations,
+    enableDeletes,
     enableBroadcasts,
   };
 }

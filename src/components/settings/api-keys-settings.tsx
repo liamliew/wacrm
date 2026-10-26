@@ -38,6 +38,7 @@ import { useAuth } from '@/hooks/use-auth';
 import {
   API_SCOPES,
   SCOPE_DESCRIPTIONS,
+  SENSITIVE_SCOPES,
   type ApiScope,
 } from '@/lib/api-keys/scopes';
 import { useTranslations } from 'next-intl';
@@ -437,6 +438,11 @@ function CreateKeyDialog({
                       <span className="min-w-0">
                         <span className="text-foreground block font-mono text-xs">
                           {scope}
+                          {SENSITIVE_SCOPES.includes(scope) && (
+                            <span className="ml-2 rounded bg-amber-500/15 px-1.5 py-0.5 font-sans text-[10px] font-medium text-amber-600 dark:text-amber-300">
+                              {t('sensitiveScope')}
+                            </span>
+                          )}
                         </span>
                         <span className="text-muted-foreground block text-xs">
                           {SCOPE_DESCRIPTIONS[scope]}
@@ -445,6 +451,9 @@ function CreateKeyDialog({
                     </label>
                   ))}
                 </div>
+                <p className="text-muted-foreground text-xs">
+                  {t('sensitiveScopesHint')}
+                </p>
                 <p className="text-muted-foreground text-xs">
                   {t.rich('scopesHint', {
                     code: (chunks: React.ReactNode) => (

@@ -2102,7 +2102,9 @@
       "newKeyTitle": "Nova chave de API",
       "newKeyDesc": "Nomeie-a conforme a integração que vai usá-la e conceda apenas os escopos necessários.",
       "done": "Concluído",
-      "networkError": "Não foi possível conectar ao servidor"
+      "networkError": "Não foi possível conectar ao servidor",
+      "sensitiveScope": "Sensível",
+      "sensitiveScopesHint": "Escopos sensíveis podem alterar configurações, enviar mensagens ou apagar dados. Dê a cada chave apenas os escopos de que ela precisa."
     },
     "deals": {
       "title": "Negócios e moeda",

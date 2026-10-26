@@ -50,6 +50,22 @@ it. Grant the minimum.
 | `conversations:read` | List and read conversations              |
 | `broadcasts:send`    | Launch broadcast campaigns               |
 | `webhooks:manage`    | Register and manage outbound webhooks    |
+| `conversations:write`| Assign, open/close, pause the AI on a conversation |
+| `contacts:delete`    | Delete contacts (and their conversations) |
+| `members:read`       | List team members (names and roles)      |
+| `ai:read` / `ai:write` | Read / change the AI agent (prompt, switches, model, handoff); playground |
+| `knowledge:read` / `knowledge:write` | Read / manage the AI knowledge base |
+| `settings:read` / `settings:write` | Tags, custom fields, quick replies |
+| `templates:read` / `templates:write` | Read / sync / submit WhatsApp templates |
+| `pipelines:read` / `pipelines:write` | Pipelines, stages and deals |
+| `flows:read` / `flows:write` | Read / edit flows and their status |
+| `automations:read` / `automations:write` | Read / edit automations |
+| `audit:read`         | Read the API audit log                   |
+
+Scopes that change how the business behaves or message customers are
+flagged **Sensitive** in the API-key dialog. Provider API keys, the
+WhatsApp access token, API-key management and member role/invite
+changes are deliberately **not** reachable through the API.
 
 A key with **no scopes** still authenticates and can call
 `GET /api/v1/me` — useful for verifying a key works.
@@ -271,6 +287,26 @@ request fails with `400 bad_request`. Response (202):
 Broadcast status + counts. Scope: `broadcasts:send`. `status` moves
 `sending` → `sent`; `delivered_count` / `read_count` keep climbing as
 Meta delivery webhooks arrive. `404` for another account's broadcast.
+
+## Configuration endpoints
+
+Beyond messaging, `/api/v1` covers the same ground as the dashboard
+(each endpoint needs the matching scope above):
+
+`/ai/config`, `/ai/knowledge[/{id}]`, `/ai/knowledge/reindex`,
+`/ai/playground`, `/ai/handoff/preview`, `/ai/usage`,
+`/conversations/{id}` (PATCH), `/contacts/{id}` (DELETE, `/notes`,
+`/custom-fields`), `/tags`, `/custom-fields`, `/quick-replies`,
+`/pipelines`, `/pipelines/{id}/stages`, `/pipeline-stages/{id}`,
+`/deals`, `/templates` (+ `/sync`), `/flows` (+ `/status`, `/validate`,
+`/runs`, `/templates`), `/automations` (+ `/duplicate`, `/logs`,
+`/templates`), `/members`, `/audit`.
+
+Writes through an API key are recorded in `api_audit_log` (migration
+061) and readable at `GET /api/v1/audit`. `send_webhook` automation
+steps cannot be created or edited via the API (data-exfiltration risk),
+and webhook headers/bodies are redacted in returned automations.
+Apply migrations 060–062 before using these endpoints.
 
 ## Pagination
 

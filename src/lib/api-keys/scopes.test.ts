@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   API_SCOPES,
   SCOPE_DESCRIPTIONS,
+  SENSITIVE_SCOPES,
   hasScope,
   isApiScope,
   normalizeScopes,
@@ -58,6 +59,24 @@ describe('SCOPE_DESCRIPTIONS', () => {
   it('has a description for every scope', () => {
     for (const s of API_SCOPES) {
       expect(SCOPE_DESCRIPTIONS[s]).toBeTruthy();
+    }
+  });
+});
+
+describe('workspace-control scopes', () => {
+  it('describes every scope', () => {
+    for (const s of API_SCOPES) expect(SCOPE_DESCRIPTIONS[s], s).toBeTruthy();
+  });
+  it('has no duplicates and keeps the original seven', () => {
+    expect(new Set(API_SCOPES).size).toBe(API_SCOPES.length);
+    for (const s of [
+      'messages:send', 'messages:read', 'contacts:read', 'contacts:write',
+      'conversations:read', 'broadcasts:send', 'webhooks:manage',
+    ]) expect(API_SCOPES).toContain(s);
+  });
+  it('flags every write-class scope as sensitive', () => {
+    for (const s of API_SCOPES) {
+      if (/:(write|delete)$/.test(s)) expect(SENSITIVE_SCOPES, s).toContain(s);
     }
   });
 });
